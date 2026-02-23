@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  quanta:
+    image: ghcr.io/quantum/quanta:latest
+    restart: always
+    networks:
+      - quanta0
+    ports:
+      - "8080:8080"
+      - "2022:2022"
+    tty: true
+    environment:
+      TZ: "UTC"
+      QUANTA_UID: 988
+      QUANTA_GID: 988
+      QUANTA_USERNAME: quantum
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "/var/lib/docker/containers/:/var/lib/docker/containers/"
+      - "/etc/quantum/:/etc/quantum/"
+      - "/var/lib/quantum/:/var/lib/quantum/"
+      - "/var/log/quantum/:/var/log/quantum/"
+      - "/tmp/quantum/:/tmp/quantum/"
+      - "/etc/ssl/certs:/etc/ssl/certs:ro"
+	  - "/run/quanta:/run/quanta"
+      # you may need /srv/daemon-data if you are upgrading from an old daemon
+      #- "/srv/daemon-data/:/srv/daemon-data/"
+      # Required for ssl if you use let's encrypt. uncomment to use.
+      #- "/etc/letsencrypt/:/etc/letsencrypt/"
+
+networks:
+  quanta0:
+    name: quanta0
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "172.21.0.0/16"
+    driver_opts:
+      com.docker.network.bridge.name: quanta0
