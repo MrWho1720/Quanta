@@ -716,7 +716,7 @@ along though, I've only included the differences between this version and the pr
 
 ## v1.0.0-beta.5
 ### Fixed
-* Default config location settled on `/etc/quantum/config.yml`; quanta will now check all of the previous locations for the configuration and move it automatically to the new location.
+* Default config location settled on `/etc/quanta/config.yml`; quanta will now check all of the previous locations for the configuration and move it automatically to the new location.
 * Deleting a server no longer fails the process if the container cannot be found.
 * Fixes permissions checking for subusers connecting to the SFTP instance.
 * S3 backups now properly send back hash data to the panel.

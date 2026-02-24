@@ -28,7 +28,7 @@ import (
 	"github.com/quantum/quanta/system"
 )
 
-const DefaultLocation = "/etc/quantum/config.yml"
+const DefaultLocation = "/etc/quanta/config.yml"
 
 // DefaultTLSConfig sets sane defaults to use when configuring the internal
 // webserver to listen for public connections.
