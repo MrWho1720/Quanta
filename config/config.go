@@ -124,26 +124,26 @@ type RemoteQueryConfiguration struct {
 // SystemConfiguration defines basic system configuration settings.
 type SystemConfiguration struct {
 	// The root directory where all of the quantum data is stored at.
-	RootDirectory string `default:"/var/lib/quantum" json:"-" yaml:"root_directory"`
+	RootDirectory string `default:"/var/lib/quanta" json:"-" yaml:"root_directory"`
 
 	// Directory where logs for server installations and other quanta events are logged.
-	LogDirectory string `default:"/var/log/quantum" json:"-" yaml:"log_directory"`
+	LogDirectory string `default:"/var/log/quanta" json:"-" yaml:"log_directory"`
 
 	// Directory where the server data is stored at.
-	Data string `default:"/var/lib/quantum/volumes" json:"-" yaml:"data"`
+	Data string `default:"/var/lib/quanta/volumes" json:"-" yaml:"data"`
 
 	// Directory where server archives for transferring will be stored.
-	ArchiveDirectory string `default:"/var/lib/quantum/archives" json:"-" yaml:"archive_directory"`
+	ArchiveDirectory string `default:"/var/lib/quanta/archives" json:"-" yaml:"archive_directory"`
 
 	// Directory where local backups will be stored on the machine.
-	BackupDirectory string `default:"/var/lib/quantum/backups" json:"-" yaml:"backup_directory"`
+	BackupDirectory string `default:"/var/lib/quanta/backups" json:"-" yaml:"backup_directory"`
 
 	// TmpDirectory specifies where temporary files for Quantum installation processes
 	// should be created. This supports environments running docker-in-docker.
-	TmpDirectory string `default:"/tmp/quantum" json:"-" yaml:"tmp_directory"`
+	TmpDirectory string `default:"/tmp/quanta" json:"-" yaml:"tmp_directory"`
 
 	// The user that should own all of the server files, and be used for containers.
-	Username string `default:"quantum" yaml:"username"`
+	Username string `default:"quanta" yaml:"username"`
 
 	// The timezone for this Quanta instance. This is detected by Quanta automatically if possible,
 	// and falls back to UTC if not able to be detected. If you need to set this manually, that
@@ -492,7 +492,7 @@ func EnsureQuantumUser() error {
 
 	// Our way of detecting if quanta is running inside of Docker.
 	if sysName == "distroless" {
-		_config.System.Username = system.FirstNotEmpty(os.Getenv("QUANTA_USERNAME"), "quantum")
+		_config.System.Username = system.FirstNotEmpty(os.Getenv("QUANTA_USERNAME"), "quanta")
 		_config.System.User.Uid = system.MustInt(system.FirstNotEmpty(os.Getenv("QUANTA_UID"), "988"))
 		_config.System.User.Gid = system.MustInt(system.FirstNotEmpty(os.Getenv("QUANTA_GID"), "988"))
 		return nil
@@ -510,7 +510,7 @@ func EnsureQuantumUser() error {
 		return nil
 	}
 
-	log.WithField("username", _config.System.Username).Info("checking for quantum system user")
+	log.WithField("username", _config.System.Username).Info("checking for quanta system user")
 	u, err := user.Lookup(_config.System.Username)
 	// If an error is returned but it isn't the unknown user error just abort
 	// the process entirely. If we did find a user, return it immediately.
