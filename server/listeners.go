@@ -59,9 +59,11 @@ func (dsl *diskSpaceLimiter) Trigger() {
 // output lines to determine if the server is started yet, and if the output is
 // not being throttled, will send the data over to the websocket.
 func (s *Server) processConsoleOutputEvent(v []byte) {
+	// Replace both the literal "^C" and the ETX byte \x03 with "stopped"
+	v = bytes.Replace(v, []byte("^C"), []byte("stopped"), -1)
+	v = bytes.Replace(v, []byte{0x03}, []byte("stopped"), -1)
+
 	// Always process the console output, but do this in a seperate thread since we
-	// don't really care about side-effects from this call, and don't want it to block
-	// the console sending logic.
 	go s.onConsoleOutput(v)
 
 	// If the console is being throttled, do nothing else with it, we don't want

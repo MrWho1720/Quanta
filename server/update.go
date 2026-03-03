@@ -61,7 +61,7 @@ func (s *Server) SyncWithEnvironment() {
 			s.Log().Info("server suspended with running process state, terminating now")
 
 			go func(s *Server) {
-				if err := s.Environment.WaitForStop(s.Context(), time.Minute, true); err != nil {
+				if err := s.Environment.WaitForStop(s.Context(), time.Second*30, true); err != nil {
 					s.Log().WithField("error", err).Warn("failed to terminate server environment after suspension")
 				}
 			}(s)

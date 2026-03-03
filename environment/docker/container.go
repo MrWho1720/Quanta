@@ -295,6 +295,10 @@ func (e *Environment) Destroy() error {
 // instance. There is no confirmation that this data is sent successfully, only
 // that it gets pushed into the stdin.
 func (e *Environment) SendCommand(c string) error {
+	if c == "" {
+		return nil
+	}
+
 	if !e.IsAttached() {
 		return errors.Wrap(ErrNotAttached, "environment/docker: cannot send command to container")
 	}

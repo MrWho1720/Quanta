@@ -147,7 +147,23 @@ func (e *Environment) Stop(ctx context.Context) error {
 		e.SetState(environment.ProcessStoppingState)
 	}
 
-	// Handle signal based actions
+	// Handle command based stops.
+	if s.Type == remote.ProcessStopCommand {
+		// Only attempt to send the stop command to the instance if we are actually attached to
+		// the instance. If we are not for some reason, attempt to attach now.
+		if !e.IsAttached() {
+			log.WithField("container_id", e.Id).Info("attempting to attach to instance for stop command...")
+			if err := e.Attach(ctx); err != nil {
+				log.WithField("container_id", e.Id).WithError(err).Warn("failed to attach to container for stop command; falling back to signal/native stop")
+			}
+		}
+
+		if e.IsAttached() {
+			return e.SendCommand(s.Value)
+		}
+	}
+
+	// Handle signal based actions.
 	if s.Type == remote.ProcessStopSignal {
 		log.WithField("signal_value", s.Value).Debug("stopping server using signal")
 
@@ -156,8 +172,10 @@ func (e *Environment) Stop(ctx context.Context) error {
 		switch strings.ToUpper(s.Value) {
 		case "SIGABRT":
 			signal = "SIGABRT"
-		case "SIGINT", "C":
+		case "SIGINT":
 			signal = "SIGINT"
+		case "C":
+			signal = "SIGTERM"
 		case "SIGTERM":
 			signal = "SIGTERM"
 		case "SIGKILL":
@@ -167,14 +185,6 @@ func (e *Environment) Stop(ctx context.Context) error {
 		}
 
 		return e.SignalContainer(ctx, signal)
-
-	}
-
-	// Handle command based stops
-	// Only attempt to send the stop command to the instance if we are actually attached to
-	// the instance. If we are not for some reason, just send the container stop event.
-	if e.IsAttached() && s.Type == remote.ProcessStopCommand {
-		return e.SendCommand(s.Value)
 	}
 
 	if s.Type == "" {
