@@ -11,6 +11,7 @@ import (
 	"github.com/docker/docker/client"
 
 	"github.com/quantum/quanta/config"
+	"github.com/quantum/quanta/system"
 )
 
 var (
@@ -71,6 +72,10 @@ func ConfigureDocker(ctx context.Context) error {
 // Creates a new network on the machine if one does not exist already.
 func createDockerNetwork(ctx context.Context, cli *client.Client) error {
 	nw := config.Get().Docker.Network
+
+	// Determine the effective MTU to use (auto-detect if 0)
+	effectiveMTU := system.GetEffectiveMTU(nw.NetworkMTU)
+
 	enableIPv6 := true
 	_, err := cli.NetworkCreate(ctx, nw.Name, network.CreateOptions{
 		Driver:     nw.Driver,
@@ -92,7 +97,7 @@ func createDockerNetwork(ctx context.Context, cli *client.Client) error {
 			"com.docker.network.bridge.enable_ip_masquerade": "true",
 			"com.docker.network.bridge.host_binding_ipv4":    "0.0.0.0",
 			"com.docker.network.bridge.name":                 "quantum0",
-			"com.docker.network.driver.mtu":                  strconv.FormatInt(nw.NetworkMTU, 10),
+			"com.docker.network.driver.mtu":                  strconv.FormatInt(effectiveMTU, 10),
 		},
 	})
 	if err != nil {
