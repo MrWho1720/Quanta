@@ -23,6 +23,6 @@ COPY --from=builder /etc/mime.types /etc/mime.types
 COPY --from=builder /app/quanta /usr/bin/
 
 ENTRYPOINT ["/usr/bin/quanta"]
-CMD ["--config", "/etc/quanta/config.yml"]
+CMD ["--config", "/etc/quantum/config.yml"]
 
 EXPOSE 8080 2022

@@ -61,8 +61,25 @@ systemctl enable --now docker || {
     exit 1
 }
 
+echo -e "${YELLOW}Migrating old data directories if present...${NC}"
+systemctl stop quanta 2>/dev/null || true
+docker stop $(docker ps -a -q --filter "label=quanta=true" 2>/dev/null) 2>/dev/null || true
+
+mkdir -p /etc/quantum /var/lib/quantum/volumes /var/log/quantum /etc/quantum/certs
+
+if [ -d /var/lib/quanta/volumes ]; then
+    mv /var/lib/quanta/volumes/* /var/lib/quantum/volumes/ 2>/dev/null || true
+fi
+if [ -d /home/quantum/quanta_data/volumes ]; then
+    mv /home/quantum/quanta_data/volumes/* /var/lib/quantum/volumes/ 2>/dev/null || true
+fi
+if [ -d /etc/quanta ]; then
+    mv /etc/quanta/* /etc/quantum/ 2>/dev/null || true
+fi
+
+rm -rf /var/lib/quanta /home/quantum/quanta_data /etc/quanta
+
 echo -e "${YELLOW}Setting up Quanta...${NC}"
-mkdir -p /etc/quanta /var/lib/quanta /var/log/quanta /etc/quanta/certs
 
 # Detect Architecture
 ARCH=$(uname -m)
@@ -150,9 +167,9 @@ PartOf=docker.service
 
 [Service]
 User=root
-WorkingDirectory=/etc/quanta
+WorkingDirectory=/etc/quantum
 LimitNOFILE=4096
-PIDFile=/var/run/quanta/daemon.pid
+PIDFile=/var/run/quantum/daemon.pid
 ExecStart=/usr/local/bin/quanta
 Restart=on-failure
 StartLimitInterval=180
@@ -165,7 +182,7 @@ EOF
     systemctl daemon-reload
     systemctl enable quanta
     echo -e "${GREEN}Systemd service 'quanta' created and enabled.${NC}"
-    echo -e "${CYAN}Reminder: Quanta is not started yet. You must configure it first (e.g. place config in /etc/quanta/config.yml)${NC}"
+    echo -e "${CYAN}Reminder: Quanta is not started yet. You must configure it first (e.g. place config in /etc/quantum/config.yml)${NC}"
 fi
 
 echo ""

@@ -28,7 +28,7 @@ import (
 	"github.com/quantum/quanta/system"
 )
 
-const DefaultLocation = "/etc/quanta/config.yml"
+const DefaultLocation = "/etc/quantum/config.yml"
 
 // DefaultTLSConfig sets sane defaults to use when configuring the internal
 // webserver to listen for public connections.
@@ -124,23 +124,23 @@ type RemoteQueryConfiguration struct {
 // SystemConfiguration defines basic system configuration settings.
 type SystemConfiguration struct {
 	// The root directory where all of the quantum data is stored at.
-	RootDirectory string `default:"/var/lib/quanta" json:"-" yaml:"root_directory"`
+	RootDirectory string `default:"/var/lib/quantum" json:"-" yaml:"root_directory"`
 
 	// Directory where logs for server installations and other quanta events are logged.
-	LogDirectory string `default:"/var/log/quanta" json:"-" yaml:"log_directory"`
+	LogDirectory string `default:"/var/log/quantum" json:"-" yaml:"log_directory"`
 
 	// Directory where the server data is stored at.
-	Data string `default:"/var/lib/quanta/volumes" json:"-" yaml:"data"`
+	Data string `default:"/var/lib/quantum/volumes" json:"-" yaml:"data"`
 
 	// Directory where server archives for transferring will be stored.
-	ArchiveDirectory string `default:"/var/lib/quanta/archives" json:"-" yaml:"archive_directory"`
+	ArchiveDirectory string `default:"/var/lib/quantum/archives" json:"-" yaml:"archive_directory"`
 
 	// Directory where local backups will be stored on the machine.
-	BackupDirectory string `default:"/var/lib/quanta/backups" json:"-" yaml:"backup_directory"`
+	BackupDirectory string `default:"/var/lib/quantum/backups" json:"-" yaml:"backup_directory"`
 
 	// TmpDirectory specifies where temporary files for Quantum installation processes
 	// should be created. This supports environments running docker-in-docker.
-	TmpDirectory string `default:"/tmp/quanta" json:"-" yaml:"tmp_directory"`
+	TmpDirectory string `default:"/tmp/quantum" json:"-" yaml:"tmp_directory"`
 
 	// The user that should own all of the server files, and be used for containers.
 	Username string `default:"quanta" yaml:"username"`
@@ -189,7 +189,7 @@ type SystemConfiguration struct {
 		// into the Quanta container as the exact path on the host, which should match the value
 		// specified here. If you are using SELinux, you will need to make sure this file has the
 		// correct SELinux context in order for containers to use it.
-		Directory string `yaml:"directory" default:"/run/quanta/etc"`
+		Directory string `yaml:"directory" default:"/run/quantum/etc"`
 	} `yaml:"passwd"`
 
 	// MachineID controls the mounting of a generated `/etc/machine-id` file into containers started by Quanta.
@@ -209,7 +209,7 @@ type SystemConfiguration struct {
 		// into the Quanta container as the exact path on the host, which should match the value
 		// specified here. If you are using SELinux, you will need to make sure this file has the
 		// correct SELinux context in order for containers to use it.
-		Directory string `yaml:"directory" default:"/run/quanta/machine-id"`
+		Directory string `yaml:"directory" default:"/run/quantum/machine-id"`
 	} `yaml:"machine_id"`
 
 	// The amount of time in seconds that can elapse before a server's disk space calculation is
@@ -703,7 +703,7 @@ func EnableLogRotation() error {
 	} else if (err != nil && os.IsNotExist(err)) || !st.IsDir() {
 		return nil
 	}
-	if _, err := os.Stat("/etc/logrotate.d/quanta"); err == nil || !os.IsNotExist(err) {
+	if _, err := os.Stat("/etc/logrotate.d/quantum"); err == nil || !os.IsNotExist(err) {
 		return err
 	}
 
@@ -711,13 +711,13 @@ func EnableLogRotation() error {
 	// If we've gotten to this point it means the logrotate directory exists on the system
 	// but there is not a file for quanta already. In that case, let us write a new file to
 	// it so files can be rotated easily.
-	f, err := os.Create("/etc/logrotate.d/quanta")
+	f, err := os.Create("/etc/logrotate.d/quantum")
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	t, err := template.New("logrotate").Parse(`{{.LogDirectory}}/quanta.log {
+	t, err := template.New("logrotate").Parse(`{{.LogDirectory}}/quantum.log {
     size 10M
     compress
     delaycompress
