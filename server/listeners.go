@@ -12,6 +12,7 @@ import (
 	"github.com/quantum/quanta/events"
 	"github.com/quantum/quanta/system"
 
+	"github.com/quantum/quanta/config"
 	"github.com/quantum/quanta/environment"
 	"github.com/quantum/quanta/remote"
 )
@@ -62,6 +63,10 @@ func (s *Server) processConsoleOutputEvent(v []byte) {
 	// Replace both the literal "^C" and the ETX byte \x03 with "stopped"
 	v = bytes.Replace(v, []byte("^C"), []byte("stopped"), -1)
 	v = bytes.Replace(v, []byte{0x03}, []byte("stopped"), -1)
+
+	if cText := config.Get().ContainerText; cText != "" {
+		v = bytes.Replace(v, []byte("container@pterodactyl~"), []byte(cText), 1)
+	}
 
 	// Always process the console output, but do this in a seperate thread since we
 	go s.onConsoleOutput(v)

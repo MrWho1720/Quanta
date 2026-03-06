@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -333,9 +334,17 @@ func (e *Environment) Readlog(lines int) ([]string, error) {
 	defer r.Close()
 
 	var out []string
+	
+	cText := config.Get().ContainerText
+	containerRegex := regexp.MustCompile(`(?i)((?:\x1b\[[0-9;]*m)*)container@pterodactyl~(?:\x1b\[[0-9;]*m)*`)
+
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
-		out = append(out, scanner.Text())
+		line := scanner.Text()
+		if cText != "" {
+			line = containerRegex.ReplaceAllString(line, "${1}"+cText)
+		}
+		out = append(out, line)
 	}
 
 	return out, nil

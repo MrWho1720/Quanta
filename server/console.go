@@ -2,30 +2,19 @@ package server
 
 import (
 	"fmt"
-	"sync"
 	"time"
-
-	"github.com/mitchellh/colorstring"
 
 	"github.com/quantum/quanta/config"
 	"github.com/quantum/quanta/system"
 )
 
-// appName is a local cache variable to avoid having to make expensive copies of
-// the configuration every time we need to send output along to the websocket for
-// a server.
-var appName string
-var appNameSync sync.Once
-
 // PublishConsoleOutputFromDaemon sends output to the server console formatted
 // to appear correctly as being sent from Quanta.
 func (s *Server) PublishConsoleOutputFromDaemon(data string) {
-	appNameSync.Do(func() {
-		appName = config.Get().AppName
-	})
+	name := config.Get().AppName
 	s.Events().Publish(
 		ConsoleOutputEvent,
-		colorstring.Color(fmt.Sprintf("[yellow][bold][%s Daemon]:[default] %s", appName, data)),
+		fmt.Sprintf("\x1b[33m\x1b[1m%s\x1b[0m %s", name, data),
 	)
 }
 

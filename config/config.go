@@ -331,6 +331,7 @@ type Configuration struct {
 	Debug bool
 
 	AppName string `default:"Quantum" json:"app_name" yaml:"app_name"`
+	ContainerText string `default:"Quantum" json:"container_text" yaml:"container_text"`
 
 	// A unique identifier for this node in the Panel.
 	Uuid string
