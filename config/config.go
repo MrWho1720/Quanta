@@ -617,6 +617,10 @@ func FromFile(path string) error {
 		return err
 	}
 
+	// Normalize the panel location by stripping trailing slashes to ensure it
+	// matches the Origin header sent by browsers (which never includes a trailing slash).
+	c.PanelLocation = strings.TrimRight(c.PanelLocation, "/")
+
 	// Store this configuration in the global state.
 	Set(c)
 	return nil

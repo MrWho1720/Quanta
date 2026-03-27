@@ -93,7 +93,7 @@ func CaptureErrors() gin.HandlerFunc {
 func SetAccessControlHeaders() gin.HandlerFunc {
 	cfg := config.Get()
 	origins := cfg.AllowedOrigins
-	location := cfg.PanelLocation
+	location := strings.TrimRight(cfg.PanelLocation, "/")
 	allowPrivateNetwork := cfg.AllowCORSPrivateNetwork
 
 	return func(c *gin.Context) {
@@ -118,13 +118,18 @@ func SetAccessControlHeaders() gin.HandlerFunc {
 		// cannot set multiple values here we need to see if the origin is one of the ones
 		// that we allow, and if so return it explicitly. Otherwise, just return the default
 		// origin which is the same URL that the Panel is located at.
-		origin := c.GetHeader("Origin")
+		origin := strings.TrimRight(c.GetHeader("Origin"), "/")
 		if origin != location {
 			for _, o := range origins {
-				if o != "*" && o != origin {
+				normalized := strings.TrimRight(o, "/")
+				if o != "*" && normalized != origin {
 					continue
 				}
-				c.Header("Access-Control-Allow-Origin", o)
+				if o == "*" {
+					c.Header("Access-Control-Allow-Origin", o)
+				} else {
+					c.Header("Access-Control-Allow-Origin", origin)
+				}
 				break
 			}
 		}
