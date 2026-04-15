@@ -180,6 +180,12 @@ install_quanta() {
 
     install_quanta_binary
 
+    if command -v ufw &> /dev/null; then
+        echo -e "${YELLOW}Configuring firewall (UFW)...${NC}"
+        ufw allow 8080/tcp
+        ufw allow 2022/tcp
+    fi
+
     read -rp "Create systemd service for Quanta? (Y/n) [Y]: " CREATE_SVC
     CREATE_SVC=${CREATE_SVC:-Y}
     if [[ "$CREATE_SVC" =~ ^[Yy]$ ]]; then
