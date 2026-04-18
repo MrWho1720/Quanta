@@ -172,10 +172,8 @@ func (e *Environment) Stop(ctx context.Context) error {
 		switch strings.ToUpper(s.Value) {
 		case "SIGABRT":
 			signal = "SIGABRT"
-		case "SIGINT":
+		case "SIGINT", "C":
 			signal = "SIGINT"
-		case "C":
-			signal = "SIGTERM"
 		case "SIGTERM":
 			signal = "SIGTERM"
 		case "SIGKILL":
