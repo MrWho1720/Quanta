@@ -232,14 +232,19 @@ func (s *Server) SyncWithConfiguration(cfg remote.ServerConfigurationResponse) e
 	s.cfg.mu.Lock()
 	defer s.cfg.mu.Unlock()
 
-	// Lock the new configuration. Since we have the deferred Unlock above we need
-	// to make sure that the NEW configuration object is already locked since that
-	// defer is running on the memory address for "s.cfg.mu" which we're explicitly
-	// changing on the next line.
-	c.mu.Lock()
-
-	//goland:noinspection GoVetCopyLock
-	s.cfg = c
+	s.cfg.Uuid = c.Uuid
+	s.cfg.Meta = c.Meta
+	s.cfg.Suspended = c.Suspended
+	s.cfg.Invocation = c.Invocation
+	s.cfg.SkipEggScripts = c.SkipEggScripts
+	s.cfg.EnvVars = c.EnvVars
+	s.cfg.Labels = c.Labels
+	s.cfg.Allocations = c.Allocations
+	s.cfg.Build = c.Build
+	s.cfg.CrashDetectionEnabled = c.CrashDetectionEnabled
+	s.cfg.Mounts = c.Mounts
+	s.cfg.Egg = c.Egg
+	s.cfg.Container = c.Container
 
 	s.Lock()
 	s.procConfig = cfg.ProcessConfiguration
