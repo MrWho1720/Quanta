@@ -19,7 +19,6 @@ func Configure(m *wserver.Manager, client remote.Client) *gin.Engine {
 	router.Use(gin.Recovery())
 	if err := router.SetTrustedProxies(config.Get().Api.TrustedProxies); err != nil {
 		panic(errors.WithStack(err))
-		return nil
 	}
 	router.Use(middleware.AttachRequestID(), middleware.CaptureErrors(), middleware.SetAccessControlHeaders())
 	router.Use(middleware.AttachServerManager(m), middleware.AttachApiClient(client))
@@ -103,8 +102,9 @@ func Configure(m *wserver.Manager, client remote.Client) *gin.Engine {
 			files.DELETE("/pull/:download", middleware.RemoteDownloadEnabled(), deleteServerPullRemoteFile)
 		}
 
-		backup := server.Group("/backup")
+		backup := server.Group("/backups")
 		{
+			backup.GET("", getServerBackups)
 			backup.POST("", postServerBackup)
 			backup.POST("/:backup/restore", postServerRestoreBackup)
 			backup.DELETE("/:backup", deleteServerBackup)

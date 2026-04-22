@@ -3,16 +3,69 @@ package router
 import (
 	"net/http"
 	"os"
+	"path"
 	"strings"
+	"time"
 
 	"emperror.dev/errors"
 	"github.com/apex/log"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
+	"github.com/quantum/quanta/config"
 	"github.com/quantum/quanta/router/middleware"
 	"github.com/quantum/quanta/server"
 	"github.com/quantum/quanta/server/backup"
 )
+
+// getServerBackups lists the local backup archives for a given server.
+func getServerBackups(c *gin.Context) {
+	s := middleware.ExtractServer(c)
+	_ = s
+	backupDir := config.Get().System.BackupDirectory
+
+	entries, err := os.ReadDir(backupDir)
+	if err != nil && !os.IsNotExist(err) {
+		middleware.CaptureAndAbort(c, err)
+		return
+	}
+
+	type BackupEntry struct {
+		Uuid          string    `json:"uuid"`
+		Name          string    `json:"name"`
+		Bytes         int64     `json:"bytes"`
+		CreatedAt     time.Time `json:"created_at"`
+		IsSuccessful  bool      `json:"is_successful"`
+	}
+
+	result := make([]BackupEntry, 0)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if !strings.HasSuffix(name, ".tar.gz") {
+			continue
+		}
+		backupUuid := strings.TrimSuffix(name, ".tar.gz")
+		if _, err := uuid.Parse(backupUuid); err != nil {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		result = append(result, BackupEntry{
+			Uuid:         backupUuid,
+			Name:         name,
+			Bytes:        info.Size(),
+			CreatedAt:    info.ModTime(),
+			IsSuccessful: true,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": result})
+}
 
 // postServerBackup performs a backup against a given server instance using the
 // provided backup adapter.
@@ -25,8 +78,13 @@ func postServerBackup(c *gin.Context) {
 		Uuid    string             `json:"uuid"`
 		Ignore  string             `json:"ignore"`
 	}
-	if err := c.BindJSON(&data); err != nil {
-		return
+	_ = c.ShouldBindJSON(&data)
+
+	if data.Uuid == "" {
+		data.Uuid = uuid.New().String()
+	}
+	if data.Adapter == "" {
+		data.Adapter = backup.LocalBackupAdapter
 	}
 
 	var adapter backup.BackupInterface
@@ -40,8 +98,6 @@ func postServerBackup(c *gin.Context) {
 		return
 	}
 
-	// Attach the server ID and the request ID to the adapter log context for easier
-	// parsing in the logs.
 	adapter.WithLogContext(map[string]interface{}{
 		"server":     s.ID(),
 		"request_id": c.GetString("request_id"),
@@ -53,7 +109,15 @@ func postServerBackup(c *gin.Context) {
 		}
 	}(adapter, s, logger)
 
-	c.Status(http.StatusAccepted)
+	c.JSON(http.StatusAccepted, gin.H{
+		"attributes": gin.H{
+			"uuid":          data.Uuid,
+			"name":          path.Base(backup.NewLocal(client, data.Uuid, "").Path()),
+			"bytes":         0,
+			"created_at":    time.Now(),
+			"is_successful": false,
+		},
+	})
 }
 
 // postServerRestoreBackup handles restoring a backup for a server by downloading
