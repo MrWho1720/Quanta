@@ -268,6 +268,10 @@ type CrashDetection struct {
 	// to be automatically restarted, this value is used to prevent servers from
 	// becoming stuck in a boot-loop after multiple consecutive crashes.
 	Timeout int `default:"60" json:"timeout"`
+
+	// CrashActivityLogLines is the number of console output lines to capture and attach
+	// to the activity log when a crash is detected. Set to 0 to disable crash log capture.
+	CrashActivityLogLines int `default:"100" yaml:"crash_activity_log_lines"`
 }
 
 type Backups struct {

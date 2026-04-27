@@ -2,7 +2,7 @@ package remote
 
 import (
 	"bytes"
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"regexp"
 	"strings"
 
@@ -173,4 +173,8 @@ type BackupRequest struct {
 type InstallStatusRequest struct {
 	Successful bool `json:"successful"`
 	Reinstall  bool `json:"reinstall"`
+}
+
+type ServerStateChange struct {
+	State string `json:"state"`
 }

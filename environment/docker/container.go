@@ -196,7 +196,7 @@ func (e *Environment) Create() error {
 	}
 
 	networkMode := container.NetworkMode(cfg.Docker.Network.Mode)
-	if a.ForceOutgoingIP {
+	if a.ForceOutgoingIP && a.DefaultMapping.Port != 0 {
 		e.log().Debug("environment/docker: forcing outgoing IP address")
 		networkName := "ip-" + strings.ReplaceAll(strings.ReplaceAll(a.DefaultMapping.Ip, ".", "-"), ":", "-")
 		networkMode = container.NetworkMode(networkName)
@@ -242,7 +242,12 @@ func (e *Environment) Create() error {
 		// from the Panel.
 		Resources: e.Configuration.Limits().AsContainerResources(),
 
-		DNS: cfg.Docker.Network.Dns,
+		DNS: func() []string {
+			if len(cfg.Docker.Network.Dns) > 0 {
+				return cfg.Docker.Network.Dns
+			}
+			return nil
+		}(),
 
 		// Configure logging for the container to make it easier on the Daemon to grab
 		// the server output. Ensure that we don't use too much space on the host machine
@@ -255,6 +260,7 @@ func (e *Environment) Create() error {
 		CapDrop: []string{
 			"setpcap", "mknod", "audit_write", "net_raw", "dac_override",
 			"fowner", "fsetid", "net_bind_service", "sys_chroot", "setfcap",
+			"sys_ptrace",
 		},
 		NetworkMode: networkMode,
 		UsernsMode:  container.UsernsMode(cfg.Docker.UsernsMode),

@@ -10,6 +10,7 @@ import (
 
 	"github.com/quantum/quanta/config"
 	"github.com/quantum/quanta/environment"
+	"github.com/quantum/quanta/internal/models"
 )
 
 type CrashHandler struct {
@@ -72,6 +73,19 @@ func (s *Server) handleServerCrash() error {
 	s.PublishConsoleOutputFromDaemon("---------- Detected server process in a crashed state! ----------")
 	s.PublishConsoleOutputFromDaemon(fmt.Sprintf("Exit code: %d", exitCode))
 	s.PublishConsoleOutputFromDaemon(fmt.Sprintf("Out of memory: %t", oomKilled))
+
+	if n := config.Get().System.CrashDetection.CrashActivityLogLines; n > 0 {
+		if lines, err := s.Environment.Readlog(n); err == nil {
+			ra := s.NewRequestActivity("system", "127.0.0.1")
+			s.SaveActivity(ra, "server:crash.detected", models.ActivityMeta{
+				"exit_code":  exitCode,
+				"oom_killed": oomKilled,
+				"output":     lines,
+			})
+		} else {
+			s.Log().WithField("error", err).Warn("failed to read console log for crash activity")
+		}
+	}
 
 	c := s.crasher.LastCrashTime()
 	timeout := config.Get().System.CrashDetection.Timeout

@@ -24,20 +24,23 @@ import (
 // a bootable state. This ensures that unexpected container deletion while Quanta
 // is running does not result in the server becoming un-bootable.
 func (e *Environment) OnBeforeStart(ctx context.Context) error {
-	// Always destroy and re-create the server container to ensure that synced data from the Panel is used.
-	if err := e.client.ContainerRemove(ctx, e.Id, container.RemoveOptions{RemoveVolumes: true}); err != nil {
+	if _, err := e.ContainerInspect(ctx); err != nil {
 		if !client.IsErrNotFound(err) {
-			return errors.WrapIf(err, "environment/docker: failed to remove container during pre-boot")
+			return errors.WrapIf(err, "environment/docker: failed to inspect container during pre-boot")
+		}
+	} else {
+		if err := e.InSituUpdate(); err != nil {
+			e.log().WithField("error", err).Warn("environment/docker: in-situ update failed, falling back to full container recreate")
+			if err := e.client.ContainerRemove(ctx, e.Id, container.RemoveOptions{RemoveVolumes: true}); err != nil {
+				if !client.IsErrNotFound(err) {
+					return errors.WrapIf(err, "environment/docker: failed to remove container during pre-boot")
+				}
+			}
+		} else {
+			return nil
 		}
 	}
 
-	// The Create() function will check if the container exists in the first place, and if
-	// so just silently return without an error. Otherwise, it will try to create the necessary
-	// container and data storage directory.
-	//
-	// This won't actually run an installation process however, it is just here to ensure the
-	// environment gets created properly if it is missing and the server is started. We're making
-	// an assumption that all the files will still exist at this point.
 	if err := e.Create(); err != nil {
 		return err
 	}
@@ -314,17 +317,31 @@ func (e *Environment) SignalContainer(ctx context.Context, signal string) error 
 	return nil
 }
 
-// Terminate forcefully terminates the container using the signal provided.
-// then sets its state to stopped.
 func (e *Environment) Terminate(ctx context.Context, signal string) error {
-	// Send the signal to the container to kill it
 	if err := e.SignalContainer(ctx, signal); err != nil {
 		return errors.WithStack(err)
 	}
 
-	// We expect Terminate to instantly kill the container
-	// so go ahead and mark it as dead and clean up
-	e.SetState(environment.ProcessOfflineState)
+	pollCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
 
+	for {
+		c, err := e.ContainerInspect(pollCtx)
+		if err != nil {
+			break
+		}
+		if !c.State.Running {
+			break
+		}
+		select {
+		case <-pollCtx.Done():
+			e.log().Warn("environment/docker: container did not stop within 10s after terminate signal, forcing offline state")
+			goto done
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
+
+done:
+	e.SetState(environment.ProcessOfflineState)
 	return nil
 }

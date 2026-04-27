@@ -188,16 +188,7 @@ func (s *Server) onBeforeStart() error {
 	// and process resource limits are correctly applied.
 	s.SyncWithEnvironment()
 
-	// If a server has unlimited disk space, we don't care enough to block the startup to check remaining.
-	// However, we should trigger a size anyway, as it'd be good to kick it off for other processes.
-	if s.DiskSpace() <= 0 {
-		s.Filesystem().HasSpaceAvailable(true)
-	} else {
-		s.PublishConsoleOutputFromDaemon("Checking server disk space usage, this could take a few seconds...")
-		if err := s.Filesystem().HasSpaceErr(false); err != nil {
-			return err
-		}
-	}
+	s.Filesystem().HasSpaceAvailable(true)
 
 	// Update the configuration files defined for the server before beginning the boot process.
 	// This process executes a bunch of parallel updates, so we just block until that process

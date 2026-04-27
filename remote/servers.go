@@ -1,11 +1,15 @@
 package remote
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 
+	"github.com/goccy/go-json"
 	"github.com/quantum/quanta/internal/models"
 
 	"emperror.dev/errors"
@@ -210,4 +214,36 @@ func (c *client) getServersPaged(ctx context.Context, page, limit int) ([]RawSer
 		return nil, r.Meta, err
 	}
 	return r.Data, r.Meta, nil
+}
+
+func (c *client) PushServerStateChange(ctx context.Context, uuid string, state string) error {
+	daemonBase := strings.TrimSuffix(c.baseUrl, "/api/remote")
+
+	body, err := json.Marshal(ServerStateChange{State: state})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		fmt.Sprintf("%s/api/daemon/servers/%s/state", daemonBase, uuid),
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.token)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		return errors.Errorf("remote: push state change returned status %d", resp.StatusCode)
+	}
+
+	return nil
 }

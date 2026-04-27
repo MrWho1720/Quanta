@@ -3,13 +3,15 @@ package server
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/goccy/go-json"
 
 	"emperror.dev/errors"
 	"github.com/apex/log"
@@ -149,9 +151,13 @@ func (s *Server) Context() context.Context {
 // Returns all of the environment variables that should be assigned to a running
 // server instance.
 func (s *Server) GetEnvironmentVariables() []string {
+	tz := config.Get().System.Timezone
+	if serverTz := s.Config().EnvVars.Get("SERVER_TIMEZONE"); serverTz != "" {
+		tz = serverTz
+	}
+
 	out := []string{
-		// TODO: allow this to be overridden by the user.
-		fmt.Sprintf("TZ=%s", config.Get().System.Timezone),
+		fmt.Sprintf("TZ=%s", tz),
 		fmt.Sprintf("STARTUP=%s", s.Config().Invocation),
 		fmt.Sprintf("SERVER_MEMORY=%d", s.MemoryLimit()),
 		fmt.Sprintf("SERVER_IP=%s", s.Config().Allocations.DefaultMapping.Ip),
@@ -330,6 +336,24 @@ func (s *Server) OnStateChange() {
 	if prevState != s.Environment.State() {
 		s.Log().WithField("status", st).Debug("saw server status change event")
 		s.Events().Publish(StatusEvent, st)
+
+		var panelState string
+		switch st {
+		case environment.ProcessRunningState, environment.ProcessStartingState:
+			panelState = "RUNNING"
+		case environment.ProcessOfflineState, environment.ProcessStoppingState:
+			panelState = "STOPPED"
+		}
+
+		if panelState != "" {
+			go func(ps string) {
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				if err := s.client.PushServerStateChange(ctx, s.ID(), ps); err != nil {
+					s.Log().WithField("error", err).Warn("failed to push state change to panel")
+				}
+			}(panelState)
+		}
 	}
 
 	// Reset the resource usage to 0 when the process fully stops so that all the UI
