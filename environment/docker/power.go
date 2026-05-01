@@ -24,29 +24,27 @@ import (
 // a bootable state. This ensures that unexpected container deletion while Quanta
 // is running does not result in the server becoming un-bootable.
 func (e *Environment) OnBeforeStart(ctx context.Context) error {
-	if _, err := e.ContainerInspect(ctx); err != nil {
+	// Always destroy and re-create the server container to ensure that synced data from the Panel is used.
+	if err := e.client.ContainerRemove(ctx, e.Id, container.RemoveOptions{RemoveVolumes: true}); err != nil {
 		if !client.IsErrNotFound(err) {
-			return errors.WrapIf(err, "environment/docker: failed to inspect container during pre-boot")
-		}
-	} else {
-		if err := e.InSituUpdate(); err != nil {
-			e.log().WithField("error", err).Warn("environment/docker: in-situ update failed, falling back to full container recreate")
-			if err := e.client.ContainerRemove(ctx, e.Id, container.RemoveOptions{RemoveVolumes: true}); err != nil {
-				if !client.IsErrNotFound(err) {
-					return errors.WrapIf(err, "environment/docker: failed to remove container during pre-boot")
-				}
-			}
-		} else {
-			return nil
+			return errors.WrapIf(err, "environment/docker: failed to remove container during pre-boot")
 		}
 	}
 
+	// The Create() function will check if the container exists in the first place, and if
+	// so just silently return without an error. Otherwise, it will try to create the necessary
+	// container and data storage directory.
+	//
+	// This won't actually run an installation process however, it is just here to ensure the
+	// environment gets created properly if it is missing and the server is started. We're making
+	// an assumption that all the files will still exist at this point.
 	if err := e.Create(); err != nil {
 		return err
 	}
 
 	return nil
 }
+
 
 // Start will start the server environment and begins piping output to the event
 // listeners for the console. If a container does not exist, or needs to be
